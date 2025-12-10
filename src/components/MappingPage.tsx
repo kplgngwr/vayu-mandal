@@ -48,6 +48,31 @@ const MappingPage = () => {
     // Real-time data state
     const [stations, setStations] = useState<AQIStation[]>(mockStations);
     const [busPositions, setBusPositions] = useState<BusPosition[]>([]);
+
+    // Realtime Firebase updates: merge incoming snapshots into local stations
+    useEffect(() => {
+        let unsubscribe: (() => void) | null = null;
+        try {
+            // Dynamic import to avoid SSR issues and keep bundle lean
+            (async () => {
+                const mod = await import('@/lib/firebase-aqi-service');
+                const { startRealtimeAQIStream, mergeFirebaseDataWithStations, isFirebaseConfigured } = mod as any;
+                if (typeof isFirebaseConfigured === 'function' && isFirebaseConfigured()) {
+                    unsubscribe = startRealtimeAQIStream((fbData: any) => {
+                        setStations(prev => mergeFirebaseDataWithStations(prev, fbData));
+                    });
+                }
+            })();
+        } catch (e) {
+            // non-fatal: mapping still works with mock/local data
+            console.warn('Realtime stream init failed', e);
+        }
+        return () => {
+            if (unsubscribe) {
+                try { unsubscribe(); } catch {}
+            }
+        };
+    }, []);
     const [isLive, setIsLive] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [lastUpdate, setLastUpdate] = useState<Date | null>(null);

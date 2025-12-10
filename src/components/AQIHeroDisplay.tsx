@@ -484,13 +484,22 @@ export default function AQIHeroDisplay() {
                                 </div>
 
                                 {/* Explore Live Map Button */}
-                                <Link
-                                    href="/mapping"
-                                    className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-gray-800/80 hover:bg-gray-900 rounded-lg text-white font-bold text-base transition-all hover:scale-105 shadow-lg"
-                                >
-                                    <span className="material-symbols-outlined">map</span>
-                                    <span>Explore the Live Map</span>
-                                </Link>
+                                <div className="flex flex-col sm:flex-row gap-3">
+                                    <Link
+                                        href="/mapping"
+                                        className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-gray-800/80 hover:bg-gray-900 rounded-lg text-white font-bold text-base transition-all hover:scale-105 shadow-lg"
+                                    >
+                                        <span className="material-symbols-outlined">map</span>
+                                        <span>Explore the Live Map</span>
+                                    </Link>
+                                    <Link
+                                        href="/reports"
+                                        className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-purple-700/90 hover:bg-purple-800 rounded-lg text-white font-bold text-base transition-all hover:scale-105 shadow-lg"
+                                    >
+                                        <span className="material-symbols-outlined">auto_awesome</span>
+                                        <span>Get Personalized Reports & Suggestions</span>
+                                    </Link>
+                                </div>
                             </div>
 
                             {/* Right Section - Weather Card matching aqi.in style */}

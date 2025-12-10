@@ -37,6 +37,8 @@ export default function Header() {
     { href: '/mapping', label: 'Mapping', icon: 'map' },
     { href: '/trafficdata', label: 'Traffic', icon: 'traffic' },
     { href: '/timestamp', label: 'Data', icon: 'analytics' },
+    // Admin: Devices monitor (Firebase realtime)
+    { href: '/admin', label: 'Admin', icon: 'settings' },
   ];
 
   const isActive = (href: string) => {

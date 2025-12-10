@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { aqiStations, trafficZones } from '@/data/mock-data';
 import { getAqiStatus, getAqiColor, getAqiLabel } from '@/utils/aqi-utils';
 import { BarChart3, Filter, MapPin, AlertTriangle, Factory, Car, Search } from 'lucide-react';
@@ -10,8 +10,24 @@ type FilterType = 'all' | 'hazardous' | 'industrial' | 'traffic';
 const TrafficDataPage = () => {
     const [filter, setFilter] = useState<FilterType>('all');
     const [searchQuery, setSearchQuery] = useState('');
+    const [stations, setStations] = useState(aqiStations);
 
-    const filteredStations = aqiStations.filter((station) => {
+    // Realtime updates from Firebase: merge into current stations list
+    useEffect(() => {
+        let unsubscribe: (() => void) | null = null;
+        (async () => {
+            const mod = await import('@/lib/firebase-aqi-service');
+            const { startRealtimeAQIStream, mergeFirebaseDataWithStations, isFirebaseConfigured } = mod as any;
+            if (isFirebaseConfigured && isFirebaseConfigured()) {
+                unsubscribe = startRealtimeAQIStream((fbData: any) => {
+                    setStations(prev => mergeFirebaseDataWithStations(prev, fbData));
+                });
+            }
+        })();
+        return () => { if (unsubscribe) try { unsubscribe(); } catch {} };
+    }, []);
+
+    const filteredStations = stations.filter((station) => {
         if (searchQuery && !station.name.toLowerCase().includes(searchQuery.toLowerCase())) {
             return false;
         }
@@ -33,7 +49,7 @@ const TrafficDataPage = () => {
                 <h1 className="text-2xl sm:text-3xl font-bold text-text-dark dark:text-white">Traffic & Industrial Data</h1>
             </div>
             <p className="text-text-muted-light dark:text-text-muted text-sm sm:text-lg mb-6 sm:mb-12">
-                Monitoring {aqiStations.length} stations across Delhi-NCR covering traffic hotspots and industrial zones
+                Monitoring {stations.length} stations across Delhi-NCR covering traffic hotspots and industrial zones
             </p>
 
             {/* Filters & Search */}
@@ -74,19 +90,19 @@ const TrafficDataPage = () => {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6 md:gap-8 mb-8 sm:mb-12">
                 <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl sm:rounded-2xl p-4 sm:p-6 md:p-8">
                     <p className="text-xl sm:text-2xl md:text-3xl font-display font-bold text-red-500 mb-2">
-                        {aqiStations.filter(s => s.aqi > 300).length}
+                        {stations.filter(s => s.aqi > 300).length}
                     </p>
                     <p className="text-sm text-gray-400">Hazardous Zones</p>
                 </div>
                 <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl sm:rounded-2xl p-4 sm:p-6 md:p-8">
                     <p className="text-xl sm:text-2xl md:text-3xl font-display font-bold text-purple-500 mb-1 sm:mb-2">
-                        {aqiStations.filter(s => s.aqi > 200 && s.aqi <= 300).length}
+                        {stations.filter(s => s.aqi > 200 && s.aqi <= 300).length}
                     </p>
                     <p className="text-xs sm:text-sm text-gray-400">Severe Zones</p>
                 </div>
                 <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl sm:rounded-2xl p-4 sm:p-6 md:p-8">
                     <p className="text-xl sm:text-2xl md:text-3xl font-display font-bold text-amber-500 mb-1 sm:mb-2">
-                        {aqiStations.filter(s => s.type === 'industrial').length}
+                        {stations.filter(s => s.type === 'industrial').length}
                     </p>
                     <p className="text-xs sm:text-sm text-gray-400">Industrial Areas</p>
                 </div>

@@ -102,6 +102,105 @@ export function subscribeToAQIData(callback: AQIUpdateCallback): () => void {
 }
 
 /**
+ * React-friendly helper: subscribe and keep latest snapshot in a callback.
+ * Use inside client components to get realtime updates without manual polling.
+ */
+export function startRealtimeAQIStream(
+    onUpdate: (data: FirebaseStationsData) => void
+): () => void {
+    return subscribeToAQIData(onUpdate);
+}
+
+// =====================
+// Purifiers Integration
+// =====================
+
+export interface FirebasePurifier {
+    airFiltered?: number;
+    lastMaintenance?: string;
+    status?: boolean;
+}
+
+export type FirebasePurifiersData = Record<string, FirebasePurifier>;
+
+type PurifierUpdateCallback = (data: FirebasePurifiersData) => void;
+
+/**
+ * Subscribe to realtime purifier updates from Firebase (RTDB path: /purifiers)
+ */
+export function subscribeToPurifiers(callback: PurifierUpdateCallback): () => void {
+    if (!isFirebaseConfigured()) {
+        console.warn('Firebase not configured, skipping purifier subscription');
+        return () => {};
+    }
+    const database = getFirebaseDatabase();
+    if (!database) return () => {};
+    const purifiersRef = ref(database, 'purifiers');
+    const handleValue = (snapshot: DataSnapshot) => {
+        const data = snapshot.val() as FirebasePurifiersData | null;
+        if (data) callback(data);
+    };
+    onValue(purifiersRef, handleValue, (error) => {
+        console.error('Firebase purifiers subscription error:', error);
+    });
+    return () => {
+        off(purifiersRef, 'value', handleValue);
+    };
+}
+
+/**
+ * One-time fetch of purifiers snapshot
+ */
+export async function getPurifiersFromFirebase(): Promise<FirebasePurifiersData | null> {
+    if (!isFirebaseConfigured()) return null;
+    const database = getFirebaseDatabase();
+    if (!database) return null;
+    try {
+        const purifiersRef = ref(database, 'purifiers');
+        const snapshot = await get(purifiersRef);
+        if (snapshot.exists()) return snapshot.val() as FirebasePurifiersData;
+        return null;
+    } catch (err) {
+        console.error('Failed to fetch purifiers from Firebase:', err);
+        return null;
+    }
+}
+
+/**
+ * Update a purifier's status (on/off)
+ */
+export async function updatePurifierStatus(id: string, status: boolean): Promise<boolean> {
+    if (!isFirebaseConfigured()) return false;
+    const database = getFirebaseDatabase();
+    if (!database) return false;
+    try {
+        const purifierRef = ref(database, `purifiers/${id}/status`);
+        await set(purifierRef, status);
+        return true;
+    } catch (err) {
+        console.error('Failed to update purifier status:', err);
+        return false;
+    }
+}
+
+/**
+ * Record a maintenance event: updates lastMaintenance to now
+ */
+export async function markPurifierMaintenance(id: string, dateISO?: string): Promise<boolean> {
+    if (!isFirebaseConfigured()) return false;
+    const database = getFirebaseDatabase();
+    if (!database) return false;
+    try {
+        const purifierRef = ref(database, `purifiers/${id}/lastMaintenance`);
+        await set(purifierRef, dateISO ?? new Date().toISOString());
+        return true;
+    } catch (err) {
+        console.error('Failed to mark purifier maintenance:', err);
+        return false;
+    }
+}
+
+/**
  * Get AQI data from Firebase (one-time fetch)
  */
 export async function getAQIDataFromFirebase(): Promise<FirebaseStationsData | null> {

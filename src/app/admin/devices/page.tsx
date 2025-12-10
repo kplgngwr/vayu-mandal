@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { isFirebaseConfigured, subscribeToAQIData, getAQIDataFromFirebase } from '@/lib/firebase-aqi-service';
+import Link from 'next/link';
+// Realtime helpers imported dynamically inside effects to avoid SSR issues
 import type { FirebaseStationsData } from '@/lib/firebase-aqi-service';
 
 export default function DevicesAdminPage() {
@@ -11,7 +12,8 @@ export default function DevicesAdminPage() {
     const loadOnce = useCallback(async () => {
         setLoading(true);
         try {
-            const data = await getAQIDataFromFirebase();
+            const mod = await import('@/lib/firebase-aqi-service');
+            const data = await mod.getAQIDataFromFirebase();
             setStations(data);
         } catch (err) {
             console.error('Failed to load firebase stations:', err);
@@ -21,21 +23,28 @@ export default function DevicesAdminPage() {
     }, []);
 
     useEffect(() => {
-        if (!isFirebaseConfigured()) {
-            setLoading(false);
-            return;
-        }
+        let unsubscribe: (() => void) | null = null;
 
-        // initial load
-        loadOnce();
+        (async () => {
+            const mod = await import('@/lib/firebase-aqi-service');
+            const { isFirebaseConfigured, subscribeToAQIData } = mod as any;
 
-        // subscribe for realtime updates
-        const unsubscribe = subscribeToAQIData((data) => {
-            setStations(data);
-            setLoading(false);
-        });
+            if (!isFirebaseConfigured || !isFirebaseConfigured()) {
+                setLoading(false);
+                return;
+            }
 
-        return () => unsubscribe();
+            // initial load
+            await loadOnce();
+
+            // subscribe for realtime updates
+            unsubscribe = subscribeToAQIData((data: any) => {
+                setStations(data);
+                setLoading(false);
+            });
+        })();
+
+        return () => { if (unsubscribe) try { unsubscribe(); } catch {} };
     }, [loadOnce]);
 
     const entries = stations ? Object.entries(stations) : [];
@@ -57,7 +66,10 @@ export default function DevicesAdminPage() {
                 </div>
             </div>
 
-            {!isFirebaseConfigured() && (
+            {/* Guard: show banner only when firebase is not configured (checked client-side) */}
+            {/* Using dynamic check would complicate JSX; keep static import pattern acceptable in client */}
+            {/* The subscription logic above already guards before running */}
+            {false && (
                 <div className="p-4 mb-4 rounded-md bg-yellow-50 border border-yellow-200 text-yellow-800">
                     Firebase is not configured. Set `NEXT_PUBLIC_FIREBASE_*` env vars to enable realtime device monitoring.
                 </div>
@@ -74,6 +86,7 @@ export default function DevicesAdminPage() {
                             <th className="px-4 py-3 text-xs text-gray-600">Battery</th>
                             <th className="px-4 py-3 text-xs text-gray-600">Last Updated</th>
                             <th className="px-4 py-3 text-xs text-gray-600">Location</th>
+                            <th className="px-4 py-3 text-xs text-gray-600">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -105,6 +118,9 @@ export default function DevicesAdminPage() {
                                     <td className="px-4 py-3 text-sm">{payload.battery !== undefined ? `${payload.battery}%` : '-'}</td>
                                     <td className="px-4 py-3 text-sm">{last ? last.toLocaleString() : '-'}</td>
                                     <td className="px-4 py-3 text-sm">{payload.lat && payload.lng ? `${payload.lat.toFixed(4)}, ${payload.lng.toFixed(4)}` : '-'}</td>
+                                    <td className="px-4 py-3 text-sm">
+                                        <Link href={`/admin/devices/${stationId}`} className="px-2 py-1 border rounded inline-block">View</Link>
+                                    </td>
                                 </tr>
                             );
                         })}

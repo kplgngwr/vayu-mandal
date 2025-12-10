@@ -12,9 +12,9 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-    metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://pranamesh.in"),
+    metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://vayu-mandal.vercel.app"),
     title: {
-        default: "PranaMesh AQI Dashboard",
+        default: "Vayu Mandal",
         template: "%s | PranaMesh",
     },
     description: "Real-time air quality monitoring for AICTE Delhi and across the NCR region. Track AQI, PM2.5, PM10, and other pollutants with live data from government and PranaMesh sensors.",
@@ -25,8 +25,8 @@ export const metadata: Metadata = {
     openGraph: {
         title: "PranaMesh AQI Dashboard",
         description: "Real-time air quality monitoring for Delhi-NCR region",
-        url: process.env.NEXT_PUBLIC_APP_URL || "https://pranamesh.in",
-        siteName: "PranaMesh",
+        url: process.env.NEXT_PUBLIC_APP_URL || "https://vayu-mandal.vercel.app",
+        siteName: "Vayu Mandal",
         locale: "en_IN",
         type: "website",
         images: [

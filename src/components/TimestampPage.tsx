@@ -110,14 +110,39 @@ const TimestampPage = () => {
         }
     }, [selectedStation, compareStation, timeRange, showComparison]);
 
-    // Initial fetch and auto-refresh
+    // Initial fetch and auto-refresh + realtime updates from Firebase
     useEffect(() => {
         fetchData();
 
         // Auto-refresh every 5 minutes
         const interval = setInterval(fetchData, 5 * 60 * 1000);
-        return () => clearInterval(interval);
-    }, [fetchData]);
+
+        // Realtime: when a station snapshot arrives, nudge current values so charts reflect it
+        let unsubscribe: (() => void) | null = null;
+        (async () => {
+            const mod = await import('@/lib/firebase-aqi-service');
+            const { startRealtimeAQIStream, isFirebaseConfigured } = mod as any;
+            if (isFirebaseConfigured && isFirebaseConfigured()) {
+                unsubscribe = startRealtimeAQIStream((fbData: any) => {
+                    const stationKey = selectedStation;
+                    const payload = fbData?.[stationKey];
+                    if (payload && typeof payload.aqi === 'number') {
+                        setCurrentAqi(payload.aqi);
+                        setLastUpdated(payload.lastUpdated ?? new Date().toISOString());
+                    }
+                    if (showComparison) {
+                        const cmpKey = compareStation;
+                        const cmpPayload = fbData?.[cmpKey];
+                        if (cmpPayload && typeof cmpPayload.aqi === 'number') {
+                            setCompareAqi(cmpPayload.aqi);
+                        }
+                    }
+                });
+            }
+        })();
+
+        return () => { clearInterval(interval); if (unsubscribe) try { unsubscribe(); } catch {} };
+    }, [fetchData, selectedStation, compareStation, showComparison]);
 
     // Calculate stats
     const stats = {
