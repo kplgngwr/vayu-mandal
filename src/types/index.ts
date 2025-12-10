@@ -49,8 +49,16 @@ export interface BusRoute {
 export interface HistoricalDataPoint {
     timestamp: string;
     aqi: number;
-    pm25: number;
-    pm10: number;
+    pm25?: number;
+    pm10?: number;
+    pm1_0?: number;
+    co?: number;
+    no2?: number;
+    so2?: number;
+    o3?: number;
+    voc?: number;
+    tvoc_ppb?: number;
+    eco2_ppm?: number;
 }
 
 // Weather Data
