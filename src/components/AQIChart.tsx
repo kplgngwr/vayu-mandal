@@ -33,13 +33,14 @@ interface AQIChartProps {
     type: 'line' | 'bar';
     title: string;
     showPM?: boolean;
+    extraKeys?: Array<{ key: keyof HistoricalDataPoint; label: string; color: string }>;
 }
 
 import { useTheme } from './ThemeProvider';
 
 // ... (imports remain)
 
-const AQIChart = ({ data, type, title, showPM = false }: AQIChartProps) => {
+const AQIChart = ({ data, type, title, showPM = false, extraKeys = [] }: AQIChartProps) => {
     const { theme } = useTheme();
 
     // Theme-based colors
@@ -105,6 +106,16 @@ const AQIChart = ({ data, type, title, showPM = false }: AQIChartProps) => {
                     borderDash: [5, 5],
                 },
             ] : []),
+            ...extraKeys.map((ek) => ({
+                label: ek.label,
+                data: data.map((d) => (d[ek.key] as number | undefined)),
+                borderColor: ek.color,
+                backgroundColor: 'transparent',
+                fill: false,
+                tension: 0.3,
+                pointRadius: 2,
+                borderDash: [3, 3],
+            })),
         ],
     };
 
@@ -113,7 +124,7 @@ const AQIChart = ({ data, type, title, showPM = false }: AQIChartProps) => {
         maintainAspectRatio: false,
         plugins: {
             legend: {
-                display: showPM,
+                display: showPM || extraKeys.length > 0,
                 position: 'top' as const,
                 labels: {
                     color: textColor,
