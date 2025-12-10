@@ -1,4 +1,7 @@
-'use client';
+"use client";
+
+// Ensure this module exports isFirebaseConfigured for consumers like admin/devices/page.tsx
+export { isFirebaseConfigured } from './firebase';
 
 import { ref, onValue, get, set, off, DataSnapshot } from 'firebase/database';
 import { getFirebaseDatabase, isFirebaseConfigured } from './firebase';
@@ -25,6 +28,20 @@ export interface FirebaseAQIData {
     lng?: number;
     battery?: number;
     lastUpdated?: string;
+
+    // extended sensor payload keys used elsewhere in the app
+    eco2_ppm?: number;
+    tvoc_ppb?: number;
+    mq135_raw?: number;
+    mq135_voltage?: number;
+    mq2_ppm?: number;
+    mq2_raw?: number;
+    mq2_voltage?: number;
+    mq7_ppm?: number;
+    mq7_raw?: number;
+    mq7_voltage?: number;
+    sgp_eco2_ppm?: number;
+    sgp_tvoc_ppb?: number;
 }
 
 /**
