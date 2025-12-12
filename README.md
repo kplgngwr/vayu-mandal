@@ -209,3 +209,22 @@ This project is developed for Smart India Hackathon 2025 by Team Optivis.
 - Delhi Pollution Control Committee (DPCC)
 - Haryana State Pollution Control Board (HSPCB)
 - SAFAR India for air quality research
+
+## Competition & Team
+
+- **Smart India Hackathon 2025 (SIH-2025)**: This application was developed as the SIH-2025 submission for the Air Quality category.
+- **Team**: Optivis — multidisciplinary team focused on environmental sensing, embedded systems, and data-driven public-health tools.
+
+## Vision & Roadmap (Productization Plan)
+
+We built PranaMesh as a working prototype and demonstration platform. The next steps to convert this into a production-ready product are:
+
+- **1) Harden data ingestion**: Move RTDB→Firestore mirroring to Cloud Functions (server-side triggers) and validate incoming sensor payloads.
+- **2) Access control & multi-tenant**: Add robust authentication (OAuth/OIDC), role-based access (admin/operator/viewer), and tenant scoping for city-level deployments.
+- **3) Observability & Alerts**: Integrate centralized logging, metrics (Prometheus/Grafana) and user-configurable alerts (email/SMS/push) for unhealthy spikes.
+- **4) Device management**: Add device provisioning, OTA update flow, and remote actuator control (purifiers, relays) with audit logs.
+- **5) Compliance & Privacy**: Implement data retention policies, anonymization options, and ensure compliance with local data protection rules.
+- **6) UX polish & mobile apps**: Develop mobile apps and refine the dashboard UI for non-technical operators and community users.
+- **7) Commercial readiness**: SLA, deployment automation (IaC), multi-region hosting, and pricing/packaging for municipalities and enterprises.
+
+If you'd like, I can scaffold these items into GitHub issues and approximate implementation timelines.
