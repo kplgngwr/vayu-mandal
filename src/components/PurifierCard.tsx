@@ -57,7 +57,7 @@ export default function PurifierCard({ id }: { id: string }) {
   const isEfficient = !!state.efficientFiltration;
   const currentSpeed = (() => {
     const isOn = !!state.status;
-    if (!isOn) return 1425;
+    if (!isOn) return 1420;
     if (isEfficient) return 1500;
     const s = state.fanSpeed ?? minSpeed;
     if (s < minSpeed) return minSpeed;
@@ -79,9 +79,9 @@ export default function PurifierCard({ id }: { id: string }) {
             onClick={() => {
               const next = !state.status;
               if (!next) {
-                // Turning Off: set fan speed to 1425 to fully stop and lock slider
-                setState((prev) => ({ ...prev, status: false, fanSpeed: 1425 }));
-                apply({ status: false, fanSpeed: 1425 });
+                // Turning Off: set fan speed to 1420 to fully stop and lock slider
+                setState((prev) => ({ ...prev, status: false, fanSpeed: 1420 }));
+                apply({ status: false, fanSpeed: 1420 });
               } else {
                 // Turning On: enable and set to baseline speed (1426) unless efficient mode forces 1500
                 const targetSpeed = state.efficientFiltration ? 1500 : 1426;

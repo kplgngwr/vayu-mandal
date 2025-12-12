@@ -13,6 +13,7 @@ export default function DeviceDetailPage() {
   const [loading, setLoading] = useState(true);
   const [historical, setHistorical] = useState<any[]>([]);
   const [histLoading, setHistLoading] = useState(false);
+  const [purifier, setPurifier] = useState<any | null>(null);
 
   useEffect(() => {
     let unsubscribe: (() => void) | null = null;
@@ -29,6 +30,17 @@ export default function DeviceDetailPage() {
         setData(snapshot?.[id] ?? null);
         setLoading(false);
       });
+
+      // load purifier state for this device (if any)
+      try {
+        const resp = await fetch(`/api/purifiers/state?id=${encodeURIComponent(id)}`);
+        if (resp.ok) {
+          const js = await resp.json();
+          if (js.success) setPurifier(js.data || null);
+        }
+      } catch (e) {
+        console.warn('Failed to load purifier state', e);
+      }
 
       // fetch historical data for charts from Firestore (readings collection)
       try {
@@ -79,6 +91,7 @@ export default function DeviceDetailPage() {
   if (!data) return <div className="p-6">Device "{id}" not found.</div>;
 
   const last = data.lastUpdated ? new Date(data.lastUpdated) : undefined;
+  const lastMaint = purifier?.lastMaintenance ? new Date(purifier.lastMaintenance) : undefined;
 
   const pm25 = data.pm25 ?? data.pm2_5 ?? data['pm2_5'] ?? null;
   const pm10 = data.pm10 ?? data.pm10 ?? null;
@@ -96,6 +109,7 @@ export default function DeviceDetailPage() {
             <div className="flex justify-between"><span className="text-gray-500">AQI</span><span className="font-semibold">{data.aqi ?? '-'}</span></div>
             <div className="flex justify-between"><span className="text-gray-500">Battery</span><span>{data.battery !== undefined ? `${data.battery}%` : '-'}</span></div>
             <div className="flex justify-between"><span className="text-gray-500">Last Updated</span><span>{last ? last.toLocaleString() : '-'}</span></div>
+            <div className="flex justify-between"><span className="text-gray-500">Last Maintenance</span><span>{lastMaint ? lastMaint.toLocaleString() : '-'}</span></div>
           </div>
 
           <div className="bg-white dark:bg-surface-dark border rounded-lg p-4 mb-4">
@@ -125,8 +139,55 @@ export default function DeviceDetailPage() {
           </div>
 
           <div className="flex gap-3">
-            <button onClick={async () => { await fetch('/api/purifiers/state?id=' + id); }} className="px-3 py-2 border rounded">Refresh RTDB</button>
-            <button onClick={async () => { await fetch('/api/purifiers/apply', { method: 'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ id, updates: { lastMaintenance: new Date().toISOString() } }) }); }} className="px-3 py-2 border rounded">Mark Maintenance</button>
+            <button
+              onClick={async () => {
+                try {
+                  const resp = await fetch('/api/purifiers/state?id=' + encodeURIComponent(id));
+                  if (resp.ok) {
+                    const js = await resp.json();
+                    if (js.success) setPurifier(js.data || null);
+                  }
+                } catch (e) {
+                  console.warn('Refresh RTDB failed', e);
+                }
+              }}
+              className="px-3 py-2 border rounded"
+            >
+              Refresh RTDB
+            </button>
+
+            <button
+              onClick={async () => {
+                const now = new Date().toISOString();
+                try {
+                  // optimistic UI update
+                  setPurifier((p: any) => ({ ...(p || {}), lastMaintenance: now }));
+                  const res = await fetch('/api/purifiers/apply', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id, updates: { lastMaintenance: now } }),
+                  });
+                  const js = await res.json().catch(() => null);
+                  if (!res.ok || !js || !js.success) {
+                    const txt = js?.error ?? 'unknown';
+                    console.warn('Failed to mark maintenance:', res.status, txt);
+                    // revert optimistic
+                    await fetch('/api/purifiers/state?id=' + encodeURIComponent(id)).then(r => r.ok && r.json()).then(js2 => js2.success && setPurifier(js2.data || null)).catch(() => {});
+                  } else {
+                    // update purifier state from server response (if available), otherwise fetch fresh
+                    if (js.data) setPurifier(js.data);
+                    else {
+                      await fetch('/api/purifiers/state?id=' + encodeURIComponent(id)).then(r => r.ok && r.json()).then(js2 => js2.success && setPurifier(js2.data || null)).catch(() => {});
+                    }
+                  }
+                } catch (e) {
+                  console.warn('Mark maintenance error', e);
+                }
+              }}
+              className="px-3 py-2 border rounded"
+            >
+              Mark Maintenance
+            </button>
           </div>
         </div>
 
