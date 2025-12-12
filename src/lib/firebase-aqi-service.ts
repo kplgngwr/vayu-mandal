@@ -336,7 +336,7 @@ export function mergeFirebaseDataWithStations(
                 location: fb.location ?? existing.location,
                 pollutants: {
                     ...existing.pollutants,
-                    pm25: fb.pm25 ?? existing.pollutants.pm25,
+                    pm25: fb.pm25 ?? (fb as any).pm2_5 ?? existing.pollutants.pm25,
                     pm10: fb.pm10 ?? existing.pollutants.pm10,
                     co: fb.co ?? existing.pollutants.co,
                     no2: fb.no2 ?? existing.pollutants.no2,
@@ -383,7 +383,7 @@ export function mergeFirebaseDataWithStations(
                 aqi: fb.aqi,
                 status: getStatus(fb.aqi),
                 pollutants: {
-                    pm25: fb.pm25 ?? 0,
+                    pm25: fb.pm25 ?? (fb as any).pm2_5 ?? 0,
                     pm10: fb.pm10 ?? 0,
                     co: fb.co ?? 0,
                     no2: fb.no2 ?? 0,

@@ -33,7 +33,8 @@ interface PollutantData {
 }
 
 interface PollutantBreakdownProps {
-    data: PollutantData;
+    data?: PollutantData;
+    stationData?: any; // legacy callers sometimes pass stationData
     stationName?: string;
 }
 
@@ -47,18 +48,31 @@ const POLLUTANT_LIMITS = {
     o3: 180,    // µg/m³ (8-hour)
 };
 
-const PollutantBreakdown = ({ data, stationName = 'Delhi' }: PollutantBreakdownProps) => {
+const PollutantBreakdown = ({ data, stationData, stationName = 'Delhi' }: PollutantBreakdownProps) => {
     const { theme } = useTheme();
+
+    // Support callers that pass `stationData` prop name
+    const payload = (data || (stationData as any) || {}) as any;
+
+    // derive canonical pollutant vals (support pm2_5 naming)
+    const canonical = {
+        pm25: (payload.pm25 ?? payload.pm2_5 ?? payload['pm2_5'] ?? null) as number | null,
+        pm10: (payload.pm10 ?? payload['pm10'] ?? null) as number | null,
+        co: (payload.co ?? null) as number | null,
+        no2: (payload.no2 ?? null) as number | null,
+        so2: (payload.so2 ?? null) as number | null,
+        o3: (payload.o3 ?? null) as number | null,
+    };
 
     // Normalize pollutant values to percentage of limit
     const normalizedData = useMemo(() => [
-        Math.min((data.pm25 / POLLUTANT_LIMITS.pm25) * 100, 150),
-        Math.min((data.pm10 / POLLUTANT_LIMITS.pm10) * 100, 150),
-        Math.min(((data.co || 1.5) / POLLUTANT_LIMITS.co) * 100, 150),
-        Math.min(((data.no2 || 45) / POLLUTANT_LIMITS.no2) * 100, 150),
-        Math.min(((data.so2 || 15) / POLLUTANT_LIMITS.so2) * 100, 150),
-        Math.min(((data.o3 || 30) / POLLUTANT_LIMITS.o3) * 100, 150),
-    ], [data]);
+        Math.min(((canonical.pm25 ?? 0) / POLLUTANT_LIMITS.pm25) * 100, 150),
+        Math.min(((canonical.pm10 ?? 0) / POLLUTANT_LIMITS.pm10) * 100, 150),
+        Math.min(((canonical.co ?? 1.5) / POLLUTANT_LIMITS.co) * 100, 150),
+        Math.min(((canonical.no2 ?? 45) / POLLUTANT_LIMITS.no2) * 100, 150),
+        Math.min(((canonical.so2 ?? 15) / POLLUTANT_LIMITS.so2) * 100, 150),
+        Math.min(((canonical.o3 ?? 30) / POLLUTANT_LIMITS.o3) * 100, 150),
+    ], [canonical.pm25, canonical.pm10, canonical.co, canonical.no2, canonical.so2, canonical.o3]);
 
     const getStatus = (percentage: number) => {
         if (percentage <= 50) return { label: 'Good', color: '#22c55e' };
@@ -118,11 +132,23 @@ const PollutantBreakdown = ({ data, stationName = 'Delhi' }: PollutantBreakdownP
                 borderWidth: 1,
                 cornerRadius: 8,
                 padding: 12,
-                callbacks: {
+                    callbacks: {
                     label: (context: { datasetIndex: number; raw: unknown; label: string }) => {
                         if (context.datasetIndex === 1) return 'Safe limit: 100%';
-                        const pollutant = context.label.toLowerCase().replace('₂', '2').replace('₃', '3') as keyof PollutantData;
-                        const actualValue = data[pollutant] || 0;
+                        // normalize label to canonical key
+                        const rawLabel = (context.label || '').toLowerCase();
+                        // remove non-alphanumeric chars so 'PM2.5' and 'pm2_5' both become 'pm25'
+                        const cleaned = rawLabel.replace(/[^a-z0-9]/g, '');
+                        const mapping: Record<string, string> = {
+                            pm25: 'pm25',
+                            pm10: 'pm10',
+                            co: 'co',
+                            no2: 'no2',
+                            so2: 'so2',
+                            o3: 'o3',
+                        };
+                        const key = mapping[cleaned] ?? cleaned;
+                        const actualValue = (canonical as any)[key] ?? 0;
                         const rawValue = typeof context.raw === 'number' ? context.raw : 0;
                         const status = getStatus(rawValue);
                         return `${actualValue} (${Math.round(rawValue)}% of limit) - ${status.label}`;
@@ -154,13 +180,13 @@ const PollutantBreakdown = ({ data, stationName = 'Delhi' }: PollutantBreakdownP
     };
 
     // Pollutant values display
-    const pollutants = [
-        { key: 'pm25', label: 'PM2.5', value: data.pm25, unit: 'µg/m³' },
-        { key: 'pm10', label: 'PM10', value: data.pm10, unit: 'µg/m³' },
-        { key: 'co', label: 'CO', value: data.co || 1.5, unit: 'mg/m³' },
-        { key: 'no2', label: 'NO₂', value: data.no2 || 45, unit: 'µg/m³' },
-        { key: 'so2', label: 'SO₂', value: data.so2 || 15, unit: 'µg/m³' },
-        { key: 'o3', label: 'O₃', value: data.o3 || 30, unit: 'µg/m³' },
+    const pollutants: Array<{ key: string; label: string; value: number | string | undefined; unit: string }> = [
+        { key: 'pm25', label: 'PM2.5', value: canonical.pm25 ?? undefined, unit: 'µg/m³' },
+        { key: 'pm10', label: 'PM10', value: canonical.pm10 ?? undefined, unit: 'µg/m³' },
+        { key: 'co', label: 'CO', value: canonical.co ?? 1.5, unit: 'mg/m³' },
+        { key: 'no2', label: 'NO₂', value: canonical.no2 ?? 45, unit: 'µg/m³' },
+        { key: 'so2', label: 'SO₂', value: canonical.so2 ?? 15, unit: 'µg/m³' },
+        { key: 'o3', label: 'O₃', value: canonical.o3 ?? 30, unit: 'µg/m³' },
     ];
 
     return (
@@ -189,7 +215,8 @@ const PollutantBreakdown = ({ data, stationName = 'Delhi' }: PollutantBreakdownP
             {/* Values Grid */}
             <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
                 {pollutants.map((p) => {
-                    const percentage = (p.value / POLLUTANT_LIMITS[p.key as keyof typeof POLLUTANT_LIMITS]) * 100;
+                    const numericValue = typeof p.value === 'number' ? p.value : (Number(p.value) || 0);
+                    const percentage = (numericValue / POLLUTANT_LIMITS[p.key as keyof typeof POLLUTANT_LIMITS]) * 100;
                     const status = getStatus(percentage);
                     return (
                         <div key={p.key} className="text-center p-3 rounded-lg bg-white/5 dark:bg-white/5">
